@@ -1,73 +1,60 @@
-# React + TypeScript + Vite
+# Multi-Workspace Task Board
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A React + TypeScript + Vite implementation of the frontend assignment.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The app runs at [http://localhost:3000](http://localhost:3000).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## What is implemented
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- Mock login flow with session persistence and expiry handling
+- Private app area with workspace switching
+- Workspace-aware board routing
+- Columns and tasks with drag-and-drop movement
+- Create, edit, and delete task flows
+- Simulated real-time updates with polling
+- Public read-only board page at `/public/board/:boardId`
+- Responsive layout for desktop and smaller screens
+
+## Engineering notes
+
+### Architecture
+
+- `React Router` handles private app routes and public shareable routes.
+- `TanStack Query` owns server-style async state: workspaces, boards, board details, and public board data.
+- `Context` is used only for lightweight app state:
+  - auth session
+  - selected workspace
+- The mock API is isolated in `src/api/mockApi.ts` and persists data to `localStorage`, which keeps the UI code close to how a real backend integration would look.
+
+### State management approach
+
+- Server state and cache invalidation live in TanStack Query.
+- Local component state handles task form drafts and temporary UI states.
+- Auth state is intentionally simple because this assignment only needs a basic gated experience.
+
+### Data fetching and synchronization
+
+- Queries fetch workspaces, board lists, board details, and public board details.
+- Mutations are used for create, update, and delete task actions.
+- Board updates poll every few seconds to simulate another user making changes.
+- A small mock realtime loop updates tasks in the stored dataset to make the activity feed and task board feel live.
+
+### Component organization
+
+- `AppShell` owns the authenticated layout and workspace navigation.
+- `BoardView` is the main reusable board surface and is shared by private and public board pages.
+- Pages stay thin and mostly coordinate route params, queries, and mutations.
+
+### Trade-offs and assumptions
+
+- I used a local mock API instead of MSW or a separate json-server to keep the project compact.
+- Session expiry is time-based and handled client-side because backend auth is mocked.
+- Public sharing is implemented as an unauthenticated route in the SPA. In production, if rich link previews or SEO became important, I would likely move public pages to an SSR-capable setup.
+- Drag-and-drop is limited to tasks, since column reordering was not required.
