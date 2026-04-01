@@ -1,10 +1,11 @@
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { BoardView } from '../components/BoardView'
 import { getPublicBoard } from '../api/mockApi'
 
 export function PublicBoardPage() {
   const { boardId = '' } = useParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const boardQuery = useQuery({
     queryKey: ['public-board', boardId],
     queryFn: () => getPublicBoard(boardId),
@@ -37,7 +38,21 @@ export function PublicBoardPage() {
           Open app
         </Link>
       </header>
-      <BoardView board={boardQuery.data} readOnly />
+      <BoardView
+        board={boardQuery.data}
+        readOnly
+        selectedTaskId={searchParams.get('taskId')}
+        onSelectTask={(taskId) => {
+          const nextParams = new URLSearchParams(searchParams)
+          if (taskId) {
+            nextParams.set('taskId', taskId)
+          } else {
+            nextParams.delete('taskId')
+          }
+          setSearchParams(nextParams, { replace: true })
+        }}
+        getTaskShareHref={(task) => `/public/board/${boardQuery.data.id}?taskId=${task.id}`}
+      />
     </div>
   )
 }

@@ -76,6 +76,18 @@ export interface PublicBoard {
   activity: ActivityEvent[]
 }
 
+export interface PublicTask {
+  task: Task
+  board: {
+    id: string
+    name: string
+    description: string
+    workspaceName: string
+  }
+  column: Column
+  updatedAt: string
+}
+
 export interface LoginPayload {
   email: string
   password: string

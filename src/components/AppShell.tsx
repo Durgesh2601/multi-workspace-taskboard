@@ -38,81 +38,80 @@ export function AppShell() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="brand-panel">
-          <p className="eyebrow">Multi-workspace taskboard</p>
-          <h1>Team delivery, without overengineering.</h1>
-          <p className="muted">
-            Workspace-aware boards, simple auth, public sharing, and simulated live updates.
-          </p>
-        </div>
-
-        <section className="panel">
-          <div className="panel-header">
-            <h2>Workspaces</h2>
-            <span className="subtle">{workspacesQuery.data?.length ?? 0}</span>
+        <div className="sidebar-sticky">
+          <div className="brand-panel">
+            <p className="eyebrow">Multi-workspace taskboard</p>
+            <h1>Team delivery, without overengineering.</h1>
+            <p className="muted">
+              Workspace-aware boards, simple auth, public sharing, and simulated live updates.
+            </p>
           </div>
 
-          <div className="workspace-list">
-            {workspacesQuery.data?.map((workspace) => (
-              <button
-                key={workspace.id}
-                type="button"
-                className={`workspace-item ${workspace.id === activeWorkspaceId ? 'active' : ''}`}
-                onClick={() => {
-                  setWorkspaceId(workspace.id)
-                  const firstBoardId =
-                    workspace.id === 'ws-design' ? 'board-q2' : 'board-growth'
-                  navigate(`/app/workspace/${workspace.id}/board/${firstBoardId}`)
-                }}
-              >
-                <span>
-                  <strong>{workspace.name}</strong>
-                  <small>
-                    {workspace.memberCount} members · {workspace.theme}
-                  </small>
-                </span>
-                <span className="workspace-pill">{workspace.slug}</span>
-              </button>
-            ))}
-          </div>
-        </section>
+          <section className="panel workspace-panel">
+            <div className="panel-header">
+              <h2>Workspaces</h2>
+              <span className="subtle">{workspacesQuery.data?.length ?? 0}</span>
+            </div>
 
-        <section className="panel">
-          <div className="panel-header">
-            <h2>Boards</h2>
-            <span className="subtle">{boardsQuery.data?.length ?? 0}</span>
-          </div>
-
-          <nav className="board-nav">
-            {boardsQuery.data?.map((board) => (
-              <div key={board.id} className="board-row">
-                <NavLink
-                  to={`/app/workspace/${board.workspaceId}/board/${board.id}`}
-                  className={({ isActive }) => `board-link ${isActive ? 'active' : ''}`}
+            <div className="workspace-list">
+              {workspacesQuery.data?.map((workspace) => (
+                <button
+                  key={workspace.id}
+                  type="button"
+                  className={`workspace-item ${workspace.id === activeWorkspaceId ? 'active' : ''}`}
+                  onClick={() => {
+                    setWorkspaceId(workspace.id)
+                    const firstBoardId =
+                      workspace.id === 'ws-design' ? 'board-q2' : 'board-growth'
+                    navigate(`/app/workspace/${workspace.id}/board/${firstBoardId}`)
+                  }}
                 >
-                  <span>{board.name}</span>
-                </NavLink>
-                {board.isPublic ? (
-                  <Link
-                    to={`/public/board/${board.id}`}
-                    className="share-link"
-                  >
-                    Public view
-                  </Link>
-                ) : null}
-              </div>
-            ))}
-          </nav>
-        </section>
+                  <span className="workspace-copy">
+                    <strong>{workspace.name}</strong>
+                    <small>
+                      {workspace.memberCount} members · {workspace.theme}
+                    </small>
+                  </span>
+                  <span className="workspace-pill">{workspace.slug}</span>
+                </button>
+              ))}
+            </div>
+          </section>
 
-        <section className="panel compact">
-          <p className="muted">
-            Signed in as <strong>{session?.user.email}</strong>
-          </p>
-          <button type="button" className="secondary-button" onClick={logout}>
-            Log out
-          </button>
-        </section>
+          <section className="panel">
+            <div className="panel-header">
+              <h2>Boards</h2>
+              <span className="subtle">{boardsQuery.data?.length ?? 0}</span>
+            </div>
+
+            <nav className="board-nav">
+              {boardsQuery.data?.map((board) => (
+                <div key={board.id} className="board-row">
+                  <NavLink
+                    to={`/app/workspace/${board.workspaceId}/board/${board.id}`}
+                    className={({ isActive }) => `board-link ${isActive ? 'active' : ''}`}
+                  >
+                    <span>{board.name}</span>
+                  </NavLink>
+                  {board.isPublic ? (
+                    <Link to={`/public/board/${board.id}`} className="share-link">
+                      Public view
+                    </Link>
+                  ) : null}
+                </div>
+              ))}
+            </nav>
+          </section>
+
+          <section className="panel compact">
+            <p className="muted">
+              Signed in as <strong>{session?.user.email}</strong>
+            </p>
+            <button type="button" className="secondary-button" onClick={logout}>
+              Log out
+            </button>
+          </section>
+        </div>
       </aside>
 
       <main className="content">

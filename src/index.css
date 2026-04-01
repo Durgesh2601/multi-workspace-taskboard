@@ -144,6 +144,16 @@ a {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  min-width: 0;
+}
+
+.sidebar-sticky {
+  position: sticky;
+  top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-self: start;
 }
 
 .brand-panel,
@@ -169,6 +179,7 @@ a {
   font-size: clamp(1.8rem, 3vw, 2.8rem);
   line-height: 1.08;
   color: #0f172a;
+  overflow-wrap: anywhere;
 }
 
 .panel,
@@ -204,6 +215,11 @@ a {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  min-width: 0;
+}
+
+.workspace-panel {
+  min-height: 0;
 }
 
 .workspace-item,
@@ -220,16 +236,23 @@ a {
   justify-content: space-between;
   gap: 0.75rem;
   text-align: left;
+  align-items: start;
+  min-width: 0;
 }
 
 .workspace-item strong,
 .board-link span:first-child {
   display: block;
   color: #102033;
+  overflow-wrap: anywhere;
 }
 
 .workspace-item small {
   color: var(--muted);
+}
+
+.workspace-copy {
+  min-width: 0;
 }
 
 .workspace-item.active,
@@ -245,11 +268,15 @@ a {
   color: var(--accent-strong);
   font-size: 0.74rem;
   align-self: start;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .board-link {
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 
 .board-row {
@@ -287,10 +314,15 @@ a {
   gap: 0.75rem;
 }
 
+.board-toolbar {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .board-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
-  gap: 1rem;
+  display: block;
 }
 
 .board-surface {
@@ -333,10 +365,21 @@ a {
   border: 1px solid rgba(15, 23, 42, 0.08);
   padding: 0.9rem;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  touch-action: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.drag-handle {
+  color: var(--muted);
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  line-height: 1;
 }
 
 .task-card.dragging {
   box-shadow: 0 20px 42px rgba(15, 23, 42, 0.18);
+  cursor: grabbing;
 }
 
 .task-card h3 {
@@ -349,6 +392,7 @@ a {
   margin: 0;
   color: var(--muted);
   font-size: 0.92rem;
+  overflow-wrap: anywhere;
 }
 
 .task-card-header,
@@ -364,6 +408,32 @@ a {
 .task-card-footer {
   align-items: center;
   justify-content: space-between;
+}
+
+.task-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.task-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.task-details-row,
+.task-details-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.task-details-description {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.7;
 }
 
 .task-card-footer {
@@ -465,7 +535,7 @@ select:focus {
 }
 
 .alert,
-.sync-banner {
+.sync-toast {
   border-radius: 16px;
   padding: 0.85rem 1rem;
   margin: 1rem 0;
@@ -473,10 +543,20 @@ select:focus {
 }
 
 .alert.warning,
-.sync-banner {
+.sync-toast {
   background: rgba(255, 244, 229, 0.9);
   color: var(--warning);
   border: 1px solid rgba(181, 71, 8, 0.2);
+}
+
+.sync-toast {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  margin: 0;
+  z-index: 40;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(10px);
 }
 
 .alert.error {
@@ -502,9 +582,115 @@ select:focus {
   display: inline-flex;
 }
 
+.public-task-card {
+  max-width: 880px;
+}
+
+.public-task-card h2 {
+  margin: 0.6rem 0 0.75rem;
+}
+
+.public-task-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.public-task-meta > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.overlay-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+
+.overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(4px);
+}
+
+.modal-panel,
+.drawer-panel {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.modal-panel {
+  top: 50%;
+  left: 50%;
+  width: min(680px, calc(100vw - 2rem));
+  transform: translate(-50%, -50%);
+  border-radius: 24px;
+}
+
+.drawer-panel {
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: min(420px, calc(100vw - 1rem));
+  border-radius: 24px 0 0 24px;
+}
+
+.overlay-header,
+.overlay-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.overlay-footer {
+  justify-content: flex-end;
+  border-bottom: 0;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.overlay-header h2 {
+  margin: 0;
+}
+
+.overlay-body {
+  padding: 1.2rem;
+  max-height: calc(100vh - 12rem);
+  overflow: auto;
+}
+
+.icon-button {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 999px;
+  background: white;
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.destructive-button {
+  background: var(--danger);
+  box-shadow: 0 10px 28px rgba(180, 35, 24, 0.22);
+}
+
+.destructive-button:hover {
+  background: #992113;
+}
+
+.modal-copy {
+  margin: 0;
+}
+
 @media (max-width: 1100px) {
-  .app-shell,
-  .board-layout {
+  .app-shell {
     grid-template-columns: 1fr;
   }
 
@@ -514,6 +700,10 @@ select:focus {
 
   .content {
     order: 1;
+  }
+
+  .sidebar-sticky {
+    position: static;
   }
 }
 
@@ -537,5 +727,28 @@ select:focus {
 
   .board-header-actions {
     align-items: start;
+  }
+
+  .board-toolbar {
+    justify-content: flex-start;
+  }
+
+  .sync-toast {
+    left: 1rem;
+    right: 1rem;
+    top: auto;
+    bottom: 1rem;
+  }
+
+  .drawer-panel {
+    width: 100%;
+    border-radius: 24px 24px 0 0;
+    top: auto;
+    bottom: 0;
+    height: min(72vh, 640px);
+  }
+
+  .public-task-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

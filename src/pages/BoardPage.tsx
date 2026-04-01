@@ -1,13 +1,67 @@
 import { useEffect, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { createTask, deleteTask, getBoard, getBoards, updateTask } from '../api/mockApi'
 import { BoardView } from '../components/BoardView'
 import type { BoardDetails } from '../types'
 
+function reorderTasks(current: BoardDetails, payload: {
+  id: string
+  title?: string
+  description?: string
+  assignee?: string
+  priority?: 'Low' | 'Medium' | 'High'
+  columnId?: string
+  order?: number
+}) {
+  const existingTask = current.tasks.find((task) => task.id === payload.id)
+  if (!existingTask) {
+    return current
+  }
+
+  const now = new Date().toISOString()
+  const nextTask = {
+    ...existingTask,
+    ...payload,
+    columnId: payload.columnId ?? existingTask.columnId,
+    updatedAt: now,
+  }
+
+  const remainingTasks = current.tasks.filter((task) => task.id !== payload.id)
+  const targetColumnId = nextTask.columnId
+  const groupedTasks = Object.fromEntries(
+    current.columns.map((column) => [column.id, [] as BoardDetails['tasks']]),
+  ) as Record<string, BoardDetails['tasks']>
+
+  remainingTasks.forEach((task) => {
+    groupedTasks[task.columnId].push(task)
+  })
+
+  Object.values(groupedTasks).forEach((tasks) => tasks.sort((a, b) => a.order - b.order))
+
+  const targetTasks = groupedTasks[targetColumnId] ?? []
+  const insertAt = Math.max(0, Math.min(payload.order ?? targetTasks.length, targetTasks.length))
+  targetTasks.splice(insertAt, 0, nextTask)
+
+  const nextTasks = current.columns.flatMap((column) =>
+    (groupedTasks[column.id] ?? []).map((task, index) => ({
+      ...task,
+      order: index,
+      updatedAt: task.id === nextTask.id ? now : task.updatedAt,
+    })),
+  )
+
+  return {
+    ...current,
+    tasks: nextTasks,
+    updatedAt: now,
+  }
+}
+
 export function BoardPage() {
   const { boardId = '', workspaceId = '' } = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
 
   const boardQuery = useQuery({
@@ -43,17 +97,7 @@ export function BoardPage() {
       const previous = queryClient.getQueryData<BoardDetails>(['board', boardId])
 
       updateBoardCache((current) => {
-        const tasks = current.tasks.map((task) =>
-          task.id === payload.id
-            ? {
-                ...task,
-                ...payload,
-                updatedAt: new Date().toISOString(),
-              }
-            : task,
-        )
-
-        return { ...current, tasks, updatedAt: new Date().toISOString() }
+        return reorderTasks(current, payload)
       })
 
       return { previous }
@@ -104,14 +148,28 @@ export function BoardPage() {
   }
 
   const board = boardQuery.data
+  const selectedTaskId = searchParams.get('taskId')
 
   return (
     <>
       {boardQuery.isFetching ? (
-        <div className="sync-banner">Syncing {activeBoardName ?? board.name}...</div>
+        <div className="sync-toast">Syncing {activeBoardName ?? board.name}...</div>
       ) : null}
       <BoardView
         board={board}
+        selectedTaskId={selectedTaskId}
+        onSelectTask={(taskId) => {
+          const nextParams = new URLSearchParams(searchParams)
+          if (taskId) {
+            nextParams.set('taskId', taskId)
+          } else {
+            nextParams.delete('taskId')
+          }
+          setSearchParams(nextParams, { replace: true })
+        }}
+        getTaskShareHref={(task) =>
+          board.isPublic ? `/public/board/${board.id}?taskId=${task.id}` : undefined
+        }
         onCreateTask={async (payload) => {
           await createTaskMutation.mutateAsync({
             ...payload,

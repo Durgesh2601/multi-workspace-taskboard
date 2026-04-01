@@ -5,6 +5,7 @@ import type {
   BoardSummary,
   LoginPayload,
   PublicBoard,
+  PublicTask,
   Session,
   Task,
   TaskPayload,
@@ -280,5 +281,37 @@ export async function getPublicBoard(boardId: string): Promise<PublicBoard> {
     columns: board.columns,
     tasks: sortTasks(board.tasks),
     activity: board.activity,
+  })
+}
+
+export async function getPublicTask(taskId: string): Promise<PublicTask> {
+  await wait()
+  const db = loadDb()
+  const board = db.boards.find(
+    (entry) => entry.isPublic && entry.tasks.some((task) => task.id === taskId),
+  )
+
+  if (!board) {
+    throw new Error('This task is not shared publicly')
+  }
+
+  const task = board.tasks.find((entry) => entry.id === taskId)
+  const column = board.columns.find((entry) => entry.id === task?.columnId)
+  const workspace = db.workspaces.find((entry) => entry.id === board.workspaceId)
+
+  if (!task || !column) {
+    throw new Error('Task not found')
+  }
+
+  return clone({
+    task,
+    column,
+    updatedAt: task.updatedAt,
+    board: {
+      id: board.id,
+      name: board.name,
+      description: board.description,
+      workspaceName: workspace?.name ?? 'Unknown workspace',
+    },
   })
 }

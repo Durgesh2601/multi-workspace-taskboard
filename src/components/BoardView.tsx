@@ -1,10 +1,12 @@
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
-  closestCorners,
+  closestCenter,
   useDroppable,
   useSensor,
   useSensors,
+  type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
 import {
@@ -15,6 +17,8 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
+import { Drawer } from './Drawer'
+import { Modal } from './Modal'
 import type { BoardDetails, PublicBoard, Task, TaskPayload, TaskPriority } from '../types'
 
 type TaskDraft = Omit<TaskPayload, 'boardId'>
@@ -22,6 +26,9 @@ type TaskDraft = Omit<TaskPayload, 'boardId'>
 interface BoardViewProps {
   board: BoardDetails | PublicBoard
   readOnly?: boolean
+  selectedTaskId?: string | null
+  onSelectTask?: (taskId: string | null) => void
+  getTaskShareHref?: (task: Task) => string | undefined
   onCreateTask?: (payload: TaskDraft) => Promise<void>
   onUpdateTask?: (
     taskId: string,
@@ -73,19 +80,104 @@ function ColumnDropZone({ id, children }: { id: string; children: ReactNode }) {
   )
 }
 
-function SortableTaskCard({
+function TaskCardContent({
   task,
   readOnly,
   onEdit,
   onDelete,
+  shareHref,
 }: {
   task: Task
   readOnly: boolean
   onEdit: () => void
   onDelete: () => void
+  shareHref?: string
+}) {
+  return (
+    <>
+      <div className="task-card-header">
+        <div className="task-card-meta">
+          <span className={`priority-tag ${task.priority.toLowerCase()}`}>{task.priority}</span>
+          <span className="subtle">{task.assignee}</span>
+        </div>
+        {!readOnly ? <span className="drag-handle">⋮⋮</span> : null}
+      </div>
+      <h3>{task.title}</h3>
+      <p>{task.description}</p>
+      <div className="task-card-footer">
+        <span className="subtle">Updated {formatTime(task.updatedAt)}</span>
+        {!readOnly ? (
+          <div className="task-actions">
+            {shareHref ? (
+              <a
+                href={shareHref}
+                className="link-button"
+                target="_blank"
+                rel="noreferrer"
+                onClick={(event) => event.stopPropagation()}
+              >
+                Share
+              </a>
+            ) : null}
+            <button
+              type="button"
+              className="link-button"
+              onClick={(event) => {
+                event.stopPropagation()
+                onEdit()
+              }}
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              className="link-button danger"
+              onClick={(event) => {
+                event.stopPropagation()
+                onDelete()
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </>
+  )
+}
+
+function SortableTaskCard({
+  task,
+  readOnly,
+  onView,
+  onEdit,
+  onDelete,
+  shareHref,
+  dragOverlay = false,
+}: {
+  task: Task
+  readOnly: boolean
+  onView: () => void
+  onEdit: () => void
+  onDelete: () => void
+  shareHref?: string
+  dragOverlay?: boolean
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id })
+
+  if (dragOverlay) {
+    return (
+      <article className="task-card dragging drag-preview">
+        <TaskCardContent
+          task={task}
+          readOnly
+          onEdit={() => undefined}
+          onDelete={() => undefined}
+        />
+      </article>
+    )
+  }
 
   return (
     <article
@@ -95,28 +187,17 @@ function SortableTaskCard({
         transition,
       }}
       className={`task-card ${isDragging ? 'dragging' : ''}`}
+      onClick={onView}
       {...attributes}
       {...listeners}
     >
-      <div className="task-card-header">
-        <span className={`priority-tag ${task.priority.toLowerCase()}`}>{task.priority}</span>
-        <span className="subtle">{task.assignee}</span>
-      </div>
-      <h3>{task.title}</h3>
-      <p>{task.description}</p>
-      <div className="task-card-footer">
-        <span className="subtle">Updated {formatTime(task.updatedAt)}</span>
-        {!readOnly ? (
-          <div className="task-actions">
-            <button type="button" className="link-button" onClick={onEdit}>
-              Edit
-            </button>
-            <button type="button" className="link-button danger" onClick={onDelete}>
-              Delete
-            </button>
-          </div>
-        ) : null}
-      </div>
+      <TaskCardContent
+        task={task}
+        readOnly={readOnly}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        shareHref={shareHref}
+      />
     </article>
   )
 }
@@ -211,6 +292,9 @@ function TaskForm({
 export function BoardView({
   board,
   readOnly = false,
+  selectedTaskId,
+  onSelectTask,
+  getTaskShareHref,
   onCreateTask,
   onUpdateTask,
   onDeleteTask,
@@ -218,15 +302,27 @@ export function BoardView({
   const { columns, tasksByColumn } = useBoardMap(board)
   const [createOpen, setCreateOpen] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
+  const [activityOpen, setActivityOpen] = useState(false)
+  const [activeDragTaskId, setActiveDragTaskId] = useState<string | null>(null)
   const [draft, setDraft] = useState<TaskDraft>({
     ...defaultDraft,
     columnId: columns[0]?.id ?? '',
   })
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const editingTask = board.tasks.find((task) => task.id === editingTaskId) ?? null
+  const deleteTask = board.tasks.find((task) => task.id === deleteTaskId) ?? null
+  const activeDragTask = board.tasks.find((task) => task.id === activeDragTaskId) ?? null
+  const selectedTask = board.tasks.find((task) => task.id === selectedTaskId) ?? null
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragTaskId(String(event.active.id))
+  }
 
   const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveDragTaskId(null)
+
     if (readOnly || !onUpdateTask) {
       return
     }
@@ -295,6 +391,7 @@ export function BoardView({
   const closeForms = () => {
     setCreateOpen(false)
     setEditingTaskId(null)
+    setDeleteTaskId(null)
     setDraft({
       ...defaultDraft,
       columnId: columns[0]?.id ?? '',
@@ -327,49 +424,27 @@ export function BoardView({
         </div>
         <div className="board-header-actions">
           <span className="subtle">Last synced {formatTime(board.updatedAt)}</span>
-          {!readOnly ? (
-            <button type="button" className="primary-button" onClick={openCreateForm}>
-              Create task
+          <div className="board-toolbar">
+            <button type="button" className="secondary-button" onClick={() => setActivityOpen(true)}>
+              Activity
             </button>
-          ) : null}
+            {!readOnly ? (
+              <button type="button" className="primary-button" onClick={openCreateForm}>
+                Create task
+              </button>
+            ) : null}
+          </div>
         </div>
       </section>
 
-      {createOpen ? (
-        <section className="panel">
-          <div className="panel-header">
-            <h2>New task</h2>
-          </div>
-          <TaskForm
-            columns={columns}
-            draft={draft}
-            setDraft={setDraft}
-            onSubmit={submitDraft}
-            onCancel={closeForms}
-            submitLabel="Create task"
-          />
-        </section>
-      ) : null}
-
-      {editingTask ? (
-        <section className="panel">
-          <div className="panel-header">
-            <h2>Edit task</h2>
-          </div>
-          <TaskForm
-            columns={columns}
-            draft={draft}
-            setDraft={setDraft}
-            onSubmit={submitDraft}
-            onCancel={closeForms}
-            submitLabel="Save changes"
-          />
-        </section>
-      ) : null}
-
       <div className="board-layout">
         <section className="board-surface panel">
-          <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
             <div className="board-columns">
               {columns.map((column) => (
                 <div key={column.id} className="column-card">
@@ -390,8 +465,10 @@ export function BoardView({
                           key={task.id}
                           task={task}
                           readOnly={readOnly}
+                          onView={() => onSelectTask?.(task.id)}
+                          shareHref={getTaskShareHref?.(task)}
                           onEdit={() => openEditForm(task)}
-                          onDelete={() => void onDeleteTask?.(task.id)}
+                          onDelete={() => setDeleteTaskId(task.id)}
                         />
                       ))}
                     </ColumnDropZone>
@@ -399,27 +476,150 @@ export function BoardView({
                 </div>
               ))}
             </div>
+            <DragOverlay>
+              {activeDragTask ? (
+                <SortableTaskCard
+                  task={activeDragTask}
+                  readOnly
+                  onView={() => undefined}
+                  onEdit={() => undefined}
+                  onDelete={() => undefined}
+                  dragOverlay
+                />
+              ) : null}
+            </DragOverlay>
           </DndContext>
         </section>
-
-        <aside className="activity-panel panel">
-          <div className="panel-header">
-            <h2>Recent activity</h2>
-          </div>
-          <div className="activity-list">
-            {board.activity.length === 0 ? (
-              <p className="muted">No recent activity yet.</p>
-            ) : (
-              board.activity.map((event) => (
-                <article key={event.id} className="activity-item">
-                  <p>{event.message}</p>
-                  <span className="subtle">{formatTime(event.createdAt)}</span>
-                </article>
-              ))
-            )}
-          </div>
-        </aside>
       </div>
+
+      <Modal
+        open={createOpen}
+        title="Create task"
+        onClose={closeForms}
+        footer={null}
+      >
+        <TaskForm
+          columns={columns}
+          draft={draft}
+          setDraft={setDraft}
+          onSubmit={() => void submitDraft()}
+          onCancel={closeForms}
+          submitLabel="Create task"
+        />
+      </Modal>
+
+      <Modal
+        open={Boolean(editingTask)}
+        title="Edit task"
+        onClose={closeForms}
+        footer={null}
+      >
+        <TaskForm
+          columns={columns}
+          draft={draft}
+          setDraft={setDraft}
+          onSubmit={() => void submitDraft()}
+          onCancel={closeForms}
+          submitLabel="Save changes"
+        />
+      </Modal>
+
+      <Modal
+        open={Boolean(deleteTask)}
+        title="Delete task"
+        onClose={() => setDeleteTaskId(null)}
+        footer={
+          <>
+            <button type="button" className="secondary-button" onClick={() => setDeleteTaskId(null)}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="primary-button destructive-button"
+              onClick={async () => {
+                if (deleteTaskId) {
+                  await onDeleteTask?.(deleteTaskId)
+                }
+                setDeleteTaskId(null)
+              }}
+            >
+              Delete task
+            </button>
+          </>
+        }
+      >
+        <p className="muted modal-copy">
+          {deleteTask
+            ? `This will permanently remove "${deleteTask.title}" from the board.`
+            : 'This task will be permanently removed.'}
+        </p>
+      </Modal>
+
+      <Drawer open={activityOpen} title="Recent activity" onClose={() => setActivityOpen(false)}>
+        <div className="activity-list">
+          {board.activity.length === 0 ? (
+            <p className="muted">No recent activity yet.</p>
+          ) : (
+            board.activity.map((event) => (
+              <article key={event.id} className="activity-item">
+                <p>{event.message}</p>
+                <span className="subtle">{formatTime(event.createdAt)}</span>
+              </article>
+            ))
+          )}
+        </div>
+      </Drawer>
+
+      <Modal
+        open={Boolean(selectedTask)}
+        title={selectedTask?.title ?? 'Task details'}
+        onClose={() => onSelectTask?.(null)}
+        footer={null}
+      >
+        {selectedTask ? (
+          <div className="task-details">
+            <div className="task-details-row">
+              <span className={`priority-tag ${selectedTask.priority.toLowerCase()}`}>
+                {selectedTask.priority}
+              </span>
+              <span className="subtle">{selectedTask.assignee}</span>
+            </div>
+            <p className="task-details-description">{selectedTask.description}</p>
+            <div className="public-task-meta">
+              <div>
+                <span className="subtle">Status</span>
+                <strong>
+                  {columns.find((column) => column.id === selectedTask.columnId)?.title ?? 'Unknown'}
+                </strong>
+              </div>
+              <div>
+                <span className="subtle">Board</span>
+                <strong>{board.name}</strong>
+              </div>
+              <div>
+                <span className="subtle">Updated</span>
+                <strong>{formatTime(selectedTask.updatedAt)}</strong>
+              </div>
+              <div>
+                <span className="subtle">Created</span>
+                <strong>{formatTime(selectedTask.createdAt)}</strong>
+              </div>
+            </div>
+            {getTaskShareHref?.(selectedTask) ? (
+              <div className="task-details-actions">
+                <a
+                  href={getTaskShareHref(selectedTask)}
+                  className="secondary-button public-link"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open shareable link
+                </a>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </Modal>
     </div>
   )
 }
