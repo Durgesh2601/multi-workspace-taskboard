@@ -6,19 +6,6 @@ import { useAuth } from '../context/AuthContext'
 import { useWorkspaceContext } from '../context/WorkspaceContext'
 import type { BoardSummary } from '../types'
 
-function navigateToFirstBoard(
-  navigate: ReturnType<typeof useNavigate>,
-  wsId: string,
-  boards: BoardSummary[] | undefined,
-) {
-  const firstBoard = boards?.[0]
-  if (firstBoard) {
-    navigate(`/app/workspace/${wsId}/board/${firstBoard.id}`)
-  } else {
-    navigate(`/app/workspace/${wsId}/board/_`)
-  }
-}
-
 export function AppShell() {
   const { logout, session } = useAuth()
   const { workspaceId, setWorkspaceId } = useWorkspaceContext()
@@ -39,18 +26,10 @@ export function AppShell() {
   })
 
   useEffect(() => {
-    if (!activeWorkspaceId && workspacesQuery.data?.[0]) {
-      const ws = workspacesQuery.data[0]
-      setWorkspaceId(ws.id)
-      const cachedBoards = queryClient.getQueryData<BoardSummary[]>(['boards', ws.id])
-      navigateToFirstBoard(navigate, ws.id, cachedBoards)
-      return
-    }
-
     if (params.workspaceId && params.workspaceId !== workspaceId) {
       setWorkspaceId(params.workspaceId)
     }
-  }, [activeWorkspaceId, navigate, params.workspaceId, queryClient, setWorkspaceId, workspaceId, workspacesQuery.data])
+  }, [params.workspaceId, setWorkspaceId, workspaceId])
 
   return (
     <div className="app-shell">
@@ -90,7 +69,10 @@ export function AppShell() {
                           queryFn: () => getBoards(workspace.id),
                         })
                       }
-                      navigateToFirstBoard(navigate, workspace.id, boards)
+                      const firstBoard = boards?.[0]
+                      if (firstBoard) {
+                        navigate(`/app/workspace/${workspace.id}/board/${firstBoard.id}`)
+                      }
                     }}
                   >
                     <span className="workspace-copy">
