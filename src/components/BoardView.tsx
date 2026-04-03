@@ -8,55 +8,67 @@ import {
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
-} from '@dnd-kit/core'
+} from "@dnd-kit/core";
 import {
   SortableContext,
   arrayMove,
   useSortable,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
-import { Drawer } from './Drawer'
-import { Modal } from './Modal'
-import type { BoardDetails, PublicBoard, Task, TaskPayload, TaskPriority } from '../types'
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  useMemo,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
+import { Drawer } from "./Drawer";
+import { Modal } from "./Modal";
+import type {
+  BoardDetails,
+  PublicBoard,
+  Task,
+  TaskPayload,
+  TaskPriority,
+} from "../types";
 
-type TaskDraft = Omit<TaskPayload, 'boardId'>
+type TaskDraft = Omit<TaskPayload, "boardId">;
 
 interface BoardViewProps {
-  board: BoardDetails | PublicBoard
-  readOnly?: boolean
-  selectedTaskId?: string | null
-  onSelectTask?: (taskId: string | null) => void
-  getTaskShareHref?: (task: Task) => string | undefined
-  onCreateTask?: (payload: TaskDraft) => Promise<void>
+  board: BoardDetails | PublicBoard;
+  readOnly?: boolean;
+  selectedTaskId?: string | null;
+  onSelectTask?: (taskId: string | null) => void;
+  getTaskShareHref?: (task: Task) => string | undefined;
+  onCreateTask?: (payload: TaskDraft) => Promise<void>;
   onUpdateTask?: (
     taskId: string,
     payload: Partial<TaskDraft> & { columnId?: string; order?: number },
-  ) => Promise<void>
-  onDeleteTask?: (taskId: string) => Promise<void>
+  ) => Promise<void>;
+  onDeleteTask?: (taskId: string) => Promise<void>;
 }
 
 const defaultDraft: TaskDraft = {
-  columnId: '',
-  title: '',
-  description: '',
-  assignee: '',
-  priority: 'Medium',
-}
+  columnId: "",
+  title: "",
+  description: "",
+  assignee: "",
+  priority: "Medium",
+};
 
 function formatTime(value: string) {
-  return new Intl.DateTimeFormat('en', {
-    hour: 'numeric',
-    minute: '2-digit',
-    month: 'short',
-    day: 'numeric',
-  }).format(new Date(value))
+  return new Intl.DateTimeFormat("en", {
+    hour: "numeric",
+    minute: "2-digit",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(value));
 }
 
 function useBoardMap(board: BoardDetails | PublicBoard) {
   return useMemo(() => {
-    const columns = board.columns.slice().sort((a, b) => a.order - b.order)
+    const columns = board.columns.slice().sort((a, b) => a.order - b.order);
     const tasksByColumn = Object.fromEntries(
       columns.map((column) => [
         column.id,
@@ -65,19 +77,19 @@ function useBoardMap(board: BoardDetails | PublicBoard) {
           .slice()
           .sort((a, b) => a.order - b.order),
       ]),
-    ) as Record<string, Task[]>
+    ) as Record<string, Task[]>;
 
-    return { columns, tasksByColumn }
-  }, [board.columns, board.tasks])
+    return { columns, tasksByColumn };
+  }, [board.columns, board.tasks]);
 }
 
 function ColumnDropZone({ id, children }: { id: string; children: ReactNode }) {
-  const { setNodeRef, isOver } = useDroppable({ id })
+  const { setNodeRef, isOver } = useDroppable({ id });
   return (
-    <div ref={setNodeRef} className={`task-list ${isOver ? 'over' : ''}`}>
+    <div ref={setNodeRef} className={`task-list ${isOver ? "over" : ""}`}>
       {children}
     </div>
-  )
+  );
 }
 
 function TaskCardContent({
@@ -87,31 +99,35 @@ function TaskCardContent({
   onDelete,
   shareHref,
 }: {
-  task: Task
-  readOnly: boolean
-  onEdit: () => void
-  onDelete: () => void
-  shareHref?: string
+  task: Task;
+  readOnly: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  shareHref?: string;
 }) {
   return (
     <>
       <div className="task-card-header">
         <div className="task-card-meta">
-          <span className={`priority-tag ${task.priority.toLowerCase()}`}>{task.priority}</span>
+          <span className={`priority-tag ${task.priority.toLowerCase()}`}>
+            {task.priority}
+          </span>
           <span className="subtle">{task.assignee}</span>
         </div>
         {!readOnly ? <span className="drag-handle">⋮⋮</span> : null}
       </div>
       <h3>{task.title}</h3>
-      <p>{task.description}</p>
-      <div className="task-card-footer">
-        <span className="subtle">Updated {formatTime(task.updatedAt)}</span>
+      <p className="task-card-desc">{task.description}</p>
+      <div className="task-card-bottom">
+        <span className="subtle task-card-time">
+          Updated {formatTime(task.updatedAt)}
+        </span>
         {!readOnly ? (
           <div className="task-actions">
             {shareHref ? (
               <a
                 href={shareHref}
-                className="link-button"
+                className="action-pill"
                 target="_blank"
                 rel="noreferrer"
                 onClick={(event) => event.stopPropagation()}
@@ -121,20 +137,20 @@ function TaskCardContent({
             ) : null}
             <button
               type="button"
-              className="link-button"
+              className="action-pill"
               onClick={(event) => {
-                event.stopPropagation()
-                onEdit()
+                event.stopPropagation();
+                onEdit();
               }}
             >
               Edit
             </button>
             <button
               type="button"
-              className="link-button danger"
+              className="action-pill danger"
               onClick={(event) => {
-                event.stopPropagation()
-                onDelete()
+                event.stopPropagation();
+                onDelete();
               }}
             >
               Delete
@@ -143,7 +159,7 @@ function TaskCardContent({
         ) : null}
       </div>
     </>
-  )
+  );
 }
 
 function SortableTaskCard({
@@ -155,16 +171,22 @@ function SortableTaskCard({
   shareHref,
   dragOverlay = false,
 }: {
-  task: Task
-  readOnly: boolean
-  onView: () => void
-  onEdit: () => void
-  onDelete: () => void
-  shareHref?: string
-  dragOverlay?: boolean
+  task: Task;
+  readOnly: boolean;
+  onView: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  shareHref?: string;
+  dragOverlay?: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: task.id })
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
 
   if (dragOverlay) {
     return (
@@ -176,7 +198,7 @@ function SortableTaskCard({
           onDelete={() => undefined}
         />
       </article>
-    )
+    );
   }
 
   return (
@@ -186,7 +208,7 @@ function SortableTaskCard({
         transform: CSS.Transform.toString(transform),
         transition,
       }}
-      className={`task-card ${isDragging ? 'dragging' : ''}`}
+      className={`task-card ${isDragging ? "dragging" : ""}`}
       onClick={onView}
       {...attributes}
       {...listeners}
@@ -199,48 +221,68 @@ function SortableTaskCard({
         shareHref={shareHref}
       />
     </article>
-  )
+  );
 }
 
 function TaskForm({
   columns,
   draft,
   setDraft,
+  errors,
   onSubmit,
   onCancel,
   submitLabel,
 }: {
-  columns: BoardDetails['columns'] | PublicBoard['columns']
-  draft: TaskDraft
-  setDraft: Dispatch<SetStateAction<TaskDraft>>
-  onSubmit: () => void
-  onCancel: () => void
-  submitLabel: string
+  columns: BoardDetails["columns"] | PublicBoard["columns"];
+  draft: TaskDraft;
+  setDraft: Dispatch<SetStateAction<TaskDraft>>;
+  errors: Record<string, string>;
+  onSubmit: () => void;
+  onCancel: () => void;
+  submitLabel: string;
 }) {
   return (
     <div className="task-form">
       <div className="task-form-grid">
-        <label>
+        <label className={errors.title ? "field-error" : ""}>
           Title
           <input
             value={draft.title}
-            onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
-            placeholder="Ship launch notes"
+            onChange={(event) =>
+              setDraft((current) => ({ ...current, title: event.target.value }))
+            }
+            placeholder="Task title"
           />
+          {errors.title ? (
+            <span className="field-error-msg">{errors.title}</span>
+          ) : null}
         </label>
-        <label>
+        <label className={errors.assignee ? "field-error" : ""}>
           Assignee
           <input
             value={draft.assignee}
-            onChange={(event) => setDraft((current) => ({ ...current, assignee: event.target.value }))}
-            placeholder="Mia"
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                assignee: event.target.value,
+              }))
+            }
+            placeholder="Assignee name"
           />
+          {errors.assignee ? (
+            <span className="field-error-msg">{errors.assignee}</span>
+          ) : null}
         </label>
         <label>
           Status
           <select
             value={draft.columnId}
-            onChange={(event) => setDraft((current) => ({ ...current, columnId: event.target.value }))}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                columnId: event.target.value,
+              }))
+            }
           >
             {columns.map((column) => (
               <option key={column.id} value={column.id}>
@@ -272,7 +314,10 @@ function TaskForm({
           rows={3}
           value={draft.description}
           onChange={(event) =>
-            setDraft((current) => ({ ...current, description: event.target.value }))
+            setDraft((current) => ({
+              ...current,
+              description: event.target.value,
+            }))
           }
           placeholder="Add the context anyone opening this task needs."
         />
@@ -286,7 +331,7 @@ function TaskForm({
         </button>
       </div>
     </div>
-  )
+  );
 }
 
 export function BoardView({
@@ -299,53 +344,64 @@ export function BoardView({
   onUpdateTask,
   onDeleteTask,
 }: BoardViewProps) {
-  const { columns, tasksByColumn } = useBoardMap(board)
-  const [createOpen, setCreateOpen] = useState(false)
-  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
-  const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
-  const [activityOpen, setActivityOpen] = useState(false)
-  const [activeDragTaskId, setActiveDragTaskId] = useState<string | null>(null)
+  const { columns, tasksByColumn } = useBoardMap(board);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [activeDragTaskId, setActiveDragTaskId] = useState<string | null>(null);
   const [draft, setDraft] = useState<TaskDraft>({
     ...defaultDraft,
-    columnId: columns[0]?.id ?? '',
-  })
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+    columnId: columns[0]?.id ?? "",
+  });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
 
-  const editingTask = board.tasks.find((task) => task.id === editingTaskId) ?? null
-  const deleteTask = board.tasks.find((task) => task.id === deleteTaskId) ?? null
-  const activeDragTask = board.tasks.find((task) => task.id === activeDragTaskId) ?? null
-  const selectedTask = board.tasks.find((task) => task.id === selectedTaskId) ?? null
+  const editingTask =
+    board.tasks.find((task) => task.id === editingTaskId) ?? null;
+  const deleteTask =
+    board.tasks.find((task) => task.id === deleteTaskId) ?? null;
+  const activeDragTask =
+    board.tasks.find((task) => task.id === activeDragTaskId) ?? null;
+  const selectedTask =
+    board.tasks.find((task) => task.id === selectedTaskId) ?? null;
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveDragTaskId(String(event.active.id))
-  }
+    setActiveDragTaskId(String(event.active.id));
+  };
 
   const handleDragEnd = async (event: DragEndEvent) => {
-    setActiveDragTaskId(null)
+    setActiveDragTaskId(null);
 
     if (readOnly || !onUpdateTask) {
-      return
+      return;
     }
 
-    const activeTaskId = String(event.active.id)
-    const overId = event.over ? String(event.over.id) : null
+    const activeTaskId = String(event.active.id);
+    const overId = event.over ? String(event.over.id) : null;
     if (!overId || activeTaskId === overId) {
-      return
+      return;
     }
 
-    const activeTask = board.tasks.find((task) => task.id === activeTaskId)
+    const activeTask = board.tasks.find((task) => task.id === activeTaskId);
     if (!activeTask) {
-      return
+      return;
     }
 
-    const overTask = board.tasks.find((task) => task.id === overId)
-    const nextColumnId = overTask?.columnId ?? overId
-    const nextColumnTasks = tasksByColumn[nextColumnId] ?? []
+    const overTask = board.tasks.find((task) => task.id === overId);
+    const nextColumnId = overTask?.columnId ?? overId;
+    const nextColumnTasks = tasksByColumn[nextColumnId] ?? [];
 
     if (overTask && overTask.columnId === activeTask.columnId) {
-      const oldIndex = nextColumnTasks.findIndex((task) => task.id === activeTask.id)
-      const newIndex = nextColumnTasks.findIndex((task) => task.id === overTask.id)
-      const reordered = arrayMove(nextColumnTasks, oldIndex, newIndex)
+      const oldIndex = nextColumnTasks.findIndex(
+        (task) => task.id === activeTask.id,
+      );
+      const newIndex = nextColumnTasks.findIndex(
+        (task) => task.id === overTask.id,
+      );
+      const reordered = arrayMove(nextColumnTasks, oldIndex, newIndex);
       await Promise.all(
         reordered.map((task, index) =>
           onUpdateTask(task.id, {
@@ -353,28 +409,28 @@ export function BoardView({
             order: index,
           }),
         ),
-      )
-      return
+      );
+      return;
     }
 
     if (nextColumnId === activeTask.columnId && !overTask) {
-      return
+      return;
     }
 
     await onUpdateTask(activeTask.id, {
       columnId: nextColumnId,
       order: nextColumnTasks.length,
-    })
-  }
+    });
+  };
 
   const openCreateForm = () => {
     setDraft({
       ...defaultDraft,
-      columnId: columns[0]?.id ?? '',
-    })
-    setCreateOpen(true)
-    setEditingTaskId(null)
-  }
+      columnId: columns[0]?.id ?? "",
+    });
+    setCreateOpen(true);
+    setEditingTaskId(null);
+  };
 
   const openEditForm = (task: Task) => {
     setDraft({
@@ -383,53 +439,73 @@ export function BoardView({
       description: task.description,
       assignee: task.assignee,
       priority: task.priority,
-    })
-    setEditingTaskId(task.id)
-    setCreateOpen(false)
-  }
+    });
+    setEditingTaskId(task.id);
+    setCreateOpen(false);
+  };
 
   const closeForms = () => {
-    setCreateOpen(false)
-    setEditingTaskId(null)
-    setDeleteTaskId(null)
+    setCreateOpen(false);
+    setEditingTaskId(null);
+    setDeleteTaskId(null);
+    setFormErrors({});
     setDraft({
       ...defaultDraft,
-      columnId: columns[0]?.id ?? '',
-    })
-  }
+      columnId: columns[0]?.id ?? "",
+    });
+  };
 
   const submitDraft = async () => {
-    if (!draft.title.trim()) {
-      return
+    const errors: Record<string, string> = {};
+    if (!draft.title.trim()) errors.title = "Title is required";
+    if (!draft.assignee.trim()) errors.assignee = "Assignee is required";
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
     }
+
+    setFormErrors({});
 
     if (editingTask && onUpdateTask) {
-      await onUpdateTask(editingTask.id, draft)
+      await onUpdateTask(editingTask.id, draft);
     } else if (onCreateTask) {
-      await onCreateTask(draft)
+      await onCreateTask(draft);
     }
 
-    closeForms()
-  }
+    closeForms();
+  };
 
   return (
     <div className="board-page">
       <section className="board-header panel">
         <div>
           <p className="eyebrow">
-            {'workspaceName' in board ? board.workspaceName : 'Private workspace board'}
+            {"workspaceName" in board
+              ? board.workspaceName
+              : "Private workspace board"}
           </p>
           <h2>{board.name}</h2>
           <p className="muted">{board.description}</p>
         </div>
         <div className="board-header-actions">
-          <span className="subtle">Last synced {formatTime(board.updatedAt)}</span>
+          <span className="subtle">
+            Last synced {formatTime(board.updatedAt)}
+          </span>
           <div className="board-toolbar">
-            <button type="button" className="secondary-button" onClick={() => setActivityOpen(true)}>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setActivityOpen(true)}
+            >
               Activity
             </button>
             {!readOnly ? (
-              <button type="button" className="primary-button" onClick={openCreateForm}>
+              <button
+                type="button"
+                className="primary-button"
+                onClick={openCreateForm}
+              >
                 Create task
               </button>
             ) : null}
@@ -438,25 +514,29 @@ export function BoardView({
       </section>
 
       <div className="board-layout">
-        <section className="board-surface panel">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <section className="board-surface panel">
             <div className="board-columns">
               {columns.map((column) => (
                 <div key={column.id} className="column-card">
                   <div className="column-header">
                     <div>
                       <h3>{column.title}</h3>
-                      <span className="subtle">{tasksByColumn[column.id]?.length ?? 0} tasks</span>
+                      <span className="subtle">
+                        {tasksByColumn[column.id]?.length ?? 0} tasks
+                      </span>
                     </div>
                   </div>
 
                   <SortableContext
-                    items={(tasksByColumn[column.id] ?? []).map((task) => task.id)}
+                    items={(tasksByColumn[column.id] ?? []).map(
+                      (task) => task.id,
+                    )}
                     strategy={verticalListSortingStrategy}
                   >
                     <ColumnDropZone id={column.id}>
@@ -476,20 +556,20 @@ export function BoardView({
                 </div>
               ))}
             </div>
-            <DragOverlay>
-              {activeDragTask ? (
-                <SortableTaskCard
-                  task={activeDragTask}
-                  readOnly
-                  onView={() => undefined}
-                  onEdit={() => undefined}
-                  onDelete={() => undefined}
-                  dragOverlay
-                />
-              ) : null}
-            </DragOverlay>
-          </DndContext>
-        </section>
+          </section>
+          <DragOverlay>
+            {activeDragTask ? (
+              <SortableTaskCard
+                task={activeDragTask}
+                readOnly
+                onView={() => undefined}
+                onEdit={() => undefined}
+                onDelete={() => undefined}
+                dragOverlay
+              />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </div>
 
       <Modal
@@ -502,6 +582,7 @@ export function BoardView({
           columns={columns}
           draft={draft}
           setDraft={setDraft}
+          errors={formErrors}
           onSubmit={() => void submitDraft()}
           onCancel={closeForms}
           submitLabel="Create task"
@@ -518,6 +599,7 @@ export function BoardView({
           columns={columns}
           draft={draft}
           setDraft={setDraft}
+          errors={formErrors}
           onSubmit={() => void submitDraft()}
           onCancel={closeForms}
           submitLabel="Save changes"
@@ -530,7 +612,11 @@ export function BoardView({
         onClose={() => setDeleteTaskId(null)}
         footer={
           <>
-            <button type="button" className="secondary-button" onClick={() => setDeleteTaskId(null)}>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => setDeleteTaskId(null)}
+            >
               Cancel
             </button>
             <button
@@ -538,9 +624,9 @@ export function BoardView({
               className="primary-button destructive-button"
               onClick={async () => {
                 if (deleteTaskId) {
-                  await onDeleteTask?.(deleteTaskId)
+                  await onDeleteTask?.(deleteTaskId);
                 }
-                setDeleteTaskId(null)
+                setDeleteTaskId(null);
               }}
             >
               Delete task
@@ -551,11 +637,15 @@ export function BoardView({
         <p className="muted modal-copy">
           {deleteTask
             ? `This will permanently remove "${deleteTask.title}" from the board.`
-            : 'This task will be permanently removed.'}
+            : "This task will be permanently removed."}
         </p>
       </Modal>
 
-      <Drawer open={activityOpen} title="Recent activity" onClose={() => setActivityOpen(false)}>
+      <Drawer
+        open={activityOpen}
+        title="Recent activity"
+        onClose={() => setActivityOpen(false)}
+      >
         <div className="activity-list">
           {board.activity.length === 0 ? (
             <p className="muted">No recent activity yet.</p>
@@ -572,24 +662,29 @@ export function BoardView({
 
       <Modal
         open={Boolean(selectedTask)}
-        title={selectedTask?.title ?? 'Task details'}
+        title={selectedTask?.title ?? "Task details"}
         onClose={() => onSelectTask?.(null)}
         footer={null}
       >
         {selectedTask ? (
           <div className="task-details">
             <div className="task-details-row">
-              <span className={`priority-tag ${selectedTask.priority.toLowerCase()}`}>
+              <span
+                className={`priority-tag ${selectedTask.priority.toLowerCase()}`}
+              >
                 {selectedTask.priority}
               </span>
               <span className="subtle">{selectedTask.assignee}</span>
             </div>
-            <p className="task-details-description">{selectedTask.description}</p>
+            <p className="task-details-description">
+              {selectedTask.description}
+            </p>
             <div className="public-task-meta">
               <div>
                 <span className="subtle">Status</span>
                 <strong>
-                  {columns.find((column) => column.id === selectedTask.columnId)?.title ?? 'Unknown'}
+                  {columns.find((column) => column.id === selectedTask.columnId)
+                    ?.title ?? "Unknown"}
                 </strong>
               </div>
               <div>
@@ -621,5 +716,5 @@ export function BoardView({
         ) : null}
       </Modal>
     </div>
-  )
+  );
 }

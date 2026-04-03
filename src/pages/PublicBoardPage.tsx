@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { BoardView } from '../components/BoardView'
@@ -11,6 +12,13 @@ export function PublicBoardPage() {
     queryFn: () => getPublicBoard(boardId),
     refetchInterval: 7000,
   })
+
+  useEffect(() => {
+    if (boardQuery.data) {
+      document.title = `${boardQuery.data.name} — ${boardQuery.data.workspaceName}`
+    }
+    return () => { document.title = 'Multi-Workspace Taskboard' }
+  }, [boardQuery.data])
 
   if (boardQuery.isLoading) {
     return <div className="state-panel">Loading shared board...</div>

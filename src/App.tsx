@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppShell } from './components/AppShell'
+import { AppIndex } from './pages/AppIndex'
 import { LoginPage } from './pages/LoginPage'
 import { BoardPage } from './pages/BoardPage'
 import { PublicBoardPage } from './pages/PublicBoardPage'
@@ -21,7 +22,7 @@ function App() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="workspace/ws-design/board/board-q2" replace />} />
+        <Route index element={<AppIndex />} />
         <Route
           path="workspace/:workspaceId/board/:boardId"
           element={<BoardPage />}

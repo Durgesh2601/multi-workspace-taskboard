@@ -134,6 +134,13 @@ export function BoardPage() {
     }
   }, [boardQuery.data, navigate, workspaceId])
 
+  useEffect(() => {
+    if (boardQuery.data) {
+      document.title = `${boardQuery.data.name} — Taskboard`
+    }
+    return () => { document.title = 'Multi-Workspace Taskboard' }
+  }, [boardQuery.data])
+
   if (boardQuery.isLoading) {
     return <div className="state-panel">Loading board...</div>
   }

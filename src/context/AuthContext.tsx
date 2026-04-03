@@ -21,13 +21,15 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
-function readSession() {
-  const stored = window.localStorage.getItem(SESSION_KEY)
-  if (!stored) {
+function readSession(): Session | null {
+  try {
+    const stored = window.localStorage.getItem(SESSION_KEY)
+    if (!stored) return null
+    return JSON.parse(stored) as Session
+  } catch {
+    window.localStorage.removeItem(SESSION_KEY)
     return null
   }
-
-  return JSON.parse(stored) as Session
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

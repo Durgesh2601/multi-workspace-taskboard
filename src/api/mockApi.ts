@@ -40,14 +40,16 @@ function buildSeedDb(): Database {
 }
 
 function loadDb(): Database {
-  const stored = window.localStorage.getItem(DB_KEY)
-  if (!stored) {
-    const seeded = buildSeedDb()
-    window.localStorage.setItem(DB_KEY, JSON.stringify(seeded))
-    return clone(seeded)
+  try {
+    const stored = window.localStorage.getItem(DB_KEY)
+    if (stored) return JSON.parse(stored) as Database
+  } catch {
+    window.localStorage.removeItem(DB_KEY)
   }
 
-  return JSON.parse(stored) as Database
+  const seeded = buildSeedDb()
+  window.localStorage.setItem(DB_KEY, JSON.stringify(seeded))
+  return clone(seeded)
 }
 
 function saveDb(db: Database) {
