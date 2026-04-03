@@ -99,7 +99,7 @@ Pages stay thin — they wire route params to queries/mutations and delegate ren
 - **Mock API over MSW/json-server** — keeps the project zero-config and self-contained. The async function signatures mirror real API calls, so swapping to a real backend would only touch the `api/` layer.
 - **Client-side session expiry** — acceptable because auth is mocked. A real integration would validate tokens server-side.
 - **Single CSS file** — chosen for speed and simplicity. CSS modules or a utility framework (Tailwind) would be the next step at scale.
-- **No test files** — given the 1–2 day scope, I prioritized feature completeness and code quality over test coverage. If time permitted, I would add integration tests for the drag-and-drop flow and form validation using Vitest + Testing Library.
+- **No test files** — given the 1–2 day scope, I prioritized feature completeness and code quality over test coverage.
 - **Drag-and-drop limited to tasks** — column reordering was not required by the spec.
 
 ## Tech stack
