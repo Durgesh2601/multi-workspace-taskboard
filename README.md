@@ -1,6 +1,6 @@
 # Multi-Workspace Task Board
 
-A React + TypeScript frontend for a SaaS-style multi-workspace task management platform, built as the FE SDE-II assignment.
+A React + TypeScript frontend for a SaaS-style multi-workspace task management platform.
 
 ## Setup instructions
 
@@ -92,7 +92,7 @@ Pages stay thin — they wire route params to queries/mutations and delegate ren
 
 - Public routes (`/public/board/:id`, `/public/task/:id`) are outside the auth gate and require no login.
 - `document.title` is set dynamically on public pages so browser tabs and link previews show the board/task name.
-- In a production setting, if rich link previews (Open Graph tags) or search indexing were needed, these pages would move to an SSR framework (Next.js, Remix) so meta tags render server-side. For this assignment, the SPA approach is sufficient.
+- In a production setting, if rich link previews (Open Graph tags) or search indexing were needed, these pages would move to an SSR framework (Next.js, Remix) so meta tags render server-side. For this project, the SPA approach is sufficient.
 
 ### Trade-offs and assumptions
 
