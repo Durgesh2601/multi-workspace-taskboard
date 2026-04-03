@@ -104,11 +104,12 @@ Pages stay thin — they wire route params to queries/mutations and delegate ren
 
 ## Tech stack
 
-| Library        | Version | Purpose                |
-| -------------- | ------- | ---------------------- |
-| React          | 19      | UI framework           |
-| TypeScript     | 5.9     | Type safety            |
-| Vite           | 5       | Dev server and bundler |
-| React Router   | 6       | Client-side routing    |
-| TanStack Query | 5       | Async state management |
-| @dnd-kit       | 6/10    | Drag-and-drop          |
+| Library           | Version | Purpose                |
+| ----------------- | ------- | ---------------------- |
+| React             | 19      | UI framework           |
+| TypeScript        | 5.9     | Type safety            |
+| Vite              | 5       | Dev server and bundler |
+| React Router      | 6       | Client-side routing    |
+| TanStack Query    | 5       | Async state management |
+| @dnd-kit/core     | 6       | Drag-and-drop engine   |
+| @dnd-kit/sortable | 10      | Sortable list strategy |
